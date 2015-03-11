@@ -6,8 +6,9 @@ from ..items import *
 
 class WlsySpider(Spider):
     name = 'wlsy'
-    course_url = "http://wlsy.xidian.edu.cn/PhyEws/student/course.aspx"
     login_url = "http://wlsy.xidian.edu.cn/PhyEws/default.aspx?ReturnUrl=%2fphyEws%2fstudent%2fselect.aspx"
+    course_url = "http://wlsy.xidian.edu.cn/PhyEws/student/course.aspx"
+    arrangement_url = "http://wlsy.xidian.edu.cn/PhyEws/student/expeinfo.aspx"
     login_form = {
         'login1$StuLoginID': '14130130295', 'login1$StuPassword': '14130130295', 'login1$UserRole': 'Student',
         'login1$btnLogin.x': '18', 'login1$btnLogin.y': '8', '__VIEWSTATE': '/wEPDwUKMTEzNzM0MjM0OWQYAQUeX19Db250cm9sc1'
@@ -20,6 +21,7 @@ class WlsySpider(Spider):
 
     def yield_course_page(self, response):
         yield Request(self.course_url, callback=self.parse_course_page)
+        yield Request(self.arrangement_url, callback=self.parse_arrangement)
 
     def parse_course_page(self, response):
         course_id_list = response.xpath("//option/@value").extract()
@@ -35,11 +37,26 @@ class WlsySpider(Spider):
     def parse_course(self, response):
         tr_list = response.xpath("//table[@id='plan1_PlanGrid']/tr")
         course = Course()
-        print course.items()
-        course['name'] = response.xpath("//option[@selected='selected']/text()").extract()[0]
-        course['course_id'] = response.xpath("//option[@selected='selected']/@value").extract()[0]
+        course['name'] = response.xpath("//option[@selected='selected']/text()").extract()[0].strip()
+        course['course_id'] = response.xpath("//option[@selected='selected']/@value").extract()[0].strip()
         course['data'] = []
         for tr in tr_list[1:]:
-            row_text_list = tr.xpath("td/span/text()").extract()
+            row_text_list = [item.strip() for item in tr.xpath("td/span/text()").extract()]
             course['data'].append(row_text_list)
-        return course
+        yield course
+
+    def parse_arrangement(self, response):
+        tr_list = response.xpath("//table[@id='ExpeClassList_ctl00_Orders_ProjectList']/tr/td/table/tr")
+        for tr in tr_list:
+            if len(tr.xpath("td")) > 1:
+                arrangement = Arrangement()
+                arrangement['name'] = tr.xpath("td/a/text()").extract()[0].strip()
+                try:
+                    arrangement['teaching_material'] = tr.xpath("td/a/text()").extract()[1].strip()
+                except IndexError:
+                    arrangement['teaching_material'] = u""
+                arrangement['capacity'] = tr.xpath("td/text()").extract()[2].strip()
+                arrangement['classroom'] = tr.xpath("td/text()").extract()[3].strip()
+                arrangement['remark'] = tr.xpath("td/text()").extract()[6].strip()
+                arrangement['selectable'] = tr.xpath("td/text()").extract()[7].strip()
+                yield arrangement
