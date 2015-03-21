@@ -1,8 +1,8 @@
-wlsy_scrapy_demo
+topit_me_scrapy
 ===
 
-a scrapy demo to get course and arrangement information from <http://wlsy.xidian.edu.cn/PhyEws>
+a scrapy demo to get images from <http://topit.me>
 
 usage:
 ---
-scrapy crawl wlsy
+scrapy crawl topit
